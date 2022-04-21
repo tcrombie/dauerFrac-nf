@@ -1,8 +1,12 @@
+# common
 .DS_Store
+
+# cp image
+*.sif
+
+# nextflow
+*pipeline_info
 *.nextflow.log*
 *.nextflow
 report.*
 work/*
-
-# cp image
-*.sif
