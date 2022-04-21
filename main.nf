@@ -13,16 +13,6 @@ if( !nextflow.version.matches('>20.0') ) {
 //date = new Date().format( 'yyyyMMdd' )
 
 /*
-~ ~ ~ > * Log Setup
-*/
-log.info '''
-dauerFrac
-'''
-log.info ""
-log.info "Pipeline                                  = ${params.pipe}"
-log.info ""
-
-/*
 ~ ~ ~ > * Parameters setup
 */
 
@@ -31,49 +21,75 @@ params.debug = null
 params.input = null
 params.output = null
 params.pipe = null
+params.test = "${workflow.projectDir}"
+
+/*
+~ ~ ~ > * Log Setup
+*/
+log.info '''
+D A U E R F R A C - N F  P I P E L I N E
+========================================
+'''
+log.info ""
+log.info "Pipeline         = ${params.pipe}"
+log.info "Output           = ${params.output}"
+log.info "Project          = ${params.test}"
+log.info ""
 
 /*
 ~ ~ ~ > * WORKFLOW
 */
+
 workflow {
-
     // get pipeline for cellprofiler     
-    pipePath = Channel.fromPath(params.pipe)
-    .view()
+    // pipePath = Channel.fromPath(params.pipe)
+    //.view()
 
-    // get output for cellprofiler
-    outPath = Channel.fromPath(params.output)
-    .view()
+    // get output for cellprofiler could be first line of the .tsv file output by R script for groups - Dan Lu uses skip 1 with splitCsv maybe that would be helpful
+    // outPath = Channel.fromPath(params.output)
+    //.view()
+
+    // define groups and file paths from hardcoded file - NEED TO CREATE THIS FILE in config_CP_input - R script would be easy
+    groups = Channel.fromPath("/projects/b1059/projects/Tim/dauerFrac-nf/CP_test/groups.tsv")
+        .splitCsv(header:true, sep: "\t")
+        .map { row ->
+                [row.group, file("${row.pipeline}"), file("${row.output}")]
+            }
+    //.view()
 
     // run cellproflier with pipeline and output
-    runCP(pipePath, outPath)
-    //view
+    // runCP(pipePath, outPath, groups)
+    runCP(groups)
+    //.view()
 }
+
+/*
+~ ~ ~ > * CONFIGURE FILES FOR CELLPROFILER
+*/
+
+// process config_CP_input {
 
 /*
 ~ ~ ~ > * RUN CELLPROFILER
 */
 
 process runCP {
-    
     input:
-        path pipePath
-        path outPath
+        tuple val(group), file(pipeline), file(output)
 
     output:
         stdout()
 
     """#!/bin/bash
-        
-        echo ${pipePath}
+
+        #echo ${group}
+        #echo ${pipeline}
+        #echo ${output}
 
         # use cellprofielr 4.2.1 image
-        #singularity exec -B /projects:/projects/ cellprofiler_4.2.1.sif \
-
-        # run cellprofiler
-        #cellprofiler -c -r -p ${pipePath} \
-        #-g Metadata_Well=A01 \
-        #-o ${outPath}
+        cellprofiler -c -r -p ${pipeline} \
+        -g ${group} \
+        -o ${output}
 
     """
 }
